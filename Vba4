@@ -1,0 +1,97 @@
+Sub ExportToPPT()
+
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    Dim ws As Worksheet
+    Dim pptPath As String
+    Dim lastRow As Long
+    Dim i As Long
+
+    Dim leftText As String
+    Dim rightText As String
+
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    pptPath = ThisWorkbook.Path & "\PPT.pptx"
+
+    ' Open PowerPoint
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    pptApp.Visible = True
+    On Error GoTo 0
+
+    ' Open or create presentation
+    If Dir(pptPath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptPath, , False)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+    End If
+
+    ' Clear existing slides
+    Do While pptPres.Slides.Count > 0
+        pptPres.Slides(1).Delete
+    Loop
+
+    ' Build content
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    For i = 2 To lastRow
+        If ws.Cells(i, 1).Value <> "" Then
+            leftText = leftText & "• " & ws.Cells(i, 1).Value & ": " & ws.Cells(i, 2).Value & vbCrLf
+        End If
+
+        If ws.Cells(i, 4).Value <> "" Then
+            rightText = rightText & "• " & ws.Cells(i, 4).Value & vbCrLf
+        End If
+    Next i
+
+    ' ==========================
+    ' CREATE SLIDE (BLANK)
+    ' ==========================
+    Set slide = pptPres.Slides.Add(1, 12)
+
+    ' ----- TITLE -----
+    Dim titleBox As Object
+    Set titleBox = slide.Shapes.AddTextbox(1, 40, 30, 700, 50)
+    With titleBox.TextFrame.TextRange
+        .Text = "Filing Information"
+        .Font.Size = 28
+        .Font.Bold = True
+    End With
+
+    ' ----- LEFT CONTENT -----
+    Dim leftBox As Object
+    Set leftBox = slide.Shapes.AddTextbox(1, 40, 100, 350, 360)
+    With leftBox.TextFrame.TextRange
+        .Text = leftText
+        .Font.Size = 18
+        .ParagraphFormat.SpaceAfter = 6
+    End With
+
+    ' ----- RIGHT HEADER -----
+    Dim rightHeader As Object
+    Set rightHeader = slide.Shapes.AddTextbox(1, 430, 100, 400, 40)
+    With rightHeader.TextFrame.TextRange
+        .Text = "Research Considerations"
+        .Font.Size = 22
+        .Font.Bold = True
+    End With
+
+    ' ----- RIGHT CONTENT -----
+    Dim rightBox As Object
+    Set rightBox = slide.Shapes.AddTextbox(1, 430, 150, 400, 350)
+    With rightBox.TextFrame.TextRange
+        .Text = rightText
+        .Font.Size = 18
+        .ParagraphFormat.SpaceAfter = 6
+    End With
+
+    ' Save safely
+    pptPres.SaveAs pptPath
+    pptPres.Close
+    pptApp.Quit
+
+End Sub
