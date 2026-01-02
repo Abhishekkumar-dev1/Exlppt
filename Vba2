@@ -1,0 +1,85 @@
+Sub ExportToPPT()
+
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    Dim ws As Worksheet
+    Dim pptPath As String
+    Dim lastRow As Long
+    Dim i As Long
+    Dim leftText As String
+    Dim rightText As String
+
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    pptPath = ThisWorkbook.Path & "\PPT.pptx"
+
+    ' Open PowerPoint
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    pptApp.Visible = True
+    On Error GoTo 0
+
+    ' Open or create presentation
+    If Dir(pptPath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptPath)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+        pptPres.SaveAs pptPath
+    End If
+
+    ' Clear old slides
+    Do While pptPres.Slides.Count > 0
+        pptPres.Slides(1).Delete
+    Loop
+
+    ' =============================
+    ' BUILD SLIDE CONTENT
+    ' =============================
+
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    leftText = ""
+    rightText = ""
+
+    For i = 2 To lastRow
+        If ws.Cells(i, 1).Value <> "" Then
+            leftText = leftText & ws.Cells(i, 1).Value & " : " & ws.Cells(i, 2).Value & vbCrLf
+        End If
+
+        If ws.Cells(i, 4).Value <> "" Then
+            rightText = rightText & "• " & ws.Cells(i, 4).Value & vbCrLf
+        End If
+    Next i
+
+    ' Create slide
+    Set pptSlide = pptPres.Slides.Add(1, 2)
+
+    ' Title
+    pptSlide.Shapes.Title.TextFrame.TextRange.Text = "Filing Information"
+
+    ' Left box
+    With pptSlide.Shapes(2).TextFrame.TextRange
+        .Text = leftText
+        .Font.Size = 18
+    End With
+
+    ' Right box
+    With pptSlide.Shapes.AddTextbox( _
+        Orientation:=1, _
+        Left:=360, Top:=120, Width:=400, Height:=350).TextFrame.TextRange
+
+        .Text = rightText
+        .Font.Size = 18
+    End With
+
+    pptPres.Save
+    pptPres.Close
+    pptApp.Quit
+
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+
+End Sub
