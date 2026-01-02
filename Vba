@@ -1,0 +1,66 @@
+Sub ExportToPPT()
+
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    Dim pptPath As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim slideIndex As Integer
+    
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change if needed
+    pptPath = ThisWorkbook.Path & "\PPT.pptx"
+
+    ' Open or create PowerPoint
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    pptApp.Visible = True
+    On Error GoTo 0
+
+    ' Check if PPT exists
+    If Dir(pptPath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptPath)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+        pptPres.SaveAs pptPath
+    End If
+
+    ' Clear old slides
+    Do While pptPres.Slides.Count > 0
+        pptPres.Slides(1).Delete
+    Loop
+
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    slideIndex = 1
+
+    ' Create slides
+    For i = 1 To lastRow Step 6
+        
+        Set pptSlide = pptPres.Slides.Add(slideIndex, 2)
+        
+        ' Title
+        pptSlide.Shapes.Title.TextFrame.TextRange.Text = ws.Cells(i, 1).Value
+        
+        ' Content
+        pptSlide.Shapes(2).TextFrame.TextRange.Text = _
+            ws.Cells(i + 1, 1).Value & vbCrLf & _
+            ws.Cells(i + 2, 1).Value & vbCrLf & _
+            ws.Cells(i + 3, 1).Value & vbCrLf & _
+            ws.Cells(i + 4, 1).Value & vbCrLf & _
+            ws.Cells(i + 5, 1).Value
+        
+        slideIndex = slideIndex + 1
+    Next i
+
+    pptPres.Save
+    pptPres.Close
+    pptApp.Quit
+
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+
+End Sub
