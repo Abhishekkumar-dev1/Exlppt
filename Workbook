@@ -1,0 +1,11 @@
+Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
+
+    On Error GoTo CleanExit
+    Application.EnableEvents = False
+
+    Call UpdatePPT_FromExcel
+
+CleanExit:
+    Application.EnableEvents = True
+
+End Sub
