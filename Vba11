@@ -1,0 +1,146 @@
+Sub UpdatePPT_FromExcel()
+
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    Dim ws As Worksheet
+    Dim basePath As String
+    Dim pptPath As String
+    Dim shp As Object
+    Dim ch As ChartObject
+    Dim sh As Shape
+    Dim slideIndex As Long
+    Dim leftPos As Long
+
+    On Error GoTo SafeExit
+
+    ' -----------------------------
+    ' VALIDATE EXCEL FILE PATH
+    ' -----------------------------
+    basePath = ThisWorkbook.Path
+
+    If basePath = "" Then
+        MsgBox "Please save this Excel file to a folder first." & vbCrLf & _
+               "PPT cannot be created without a valid path.", vbCritical
+        Exit Sub
+    End If
+
+    pptPath = basePath & "\Sales_Report.pptx"
+
+    Set ws = ThisWorkbook.Worksheets("Sheet1")
+
+    ' -----------------------------
+    ' START POWERPOINT
+    ' -----------------------------
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    pptApp.Visible = True
+    On Error GoTo SafeExit
+
+    ' -----------------------------
+    ' OPEN OR CREATE PPT
+    ' -----------------------------
+    If Dir(pptPath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptPath, , False)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+    End If
+
+    ' -----------------------------
+    ' CLEAR EXISTING SLIDES
+    ' -----------------------------
+    Do While pptPres.Slides.Count > 0
+        pptPres.Slides(1).Delete
+    Loop
+
+    slideIndex = 1
+
+    ' =====================================================
+    ' SLIDE 1 — FORMATTED DATA TABLE
+    ' =====================================================
+    Set pptSlide = pptPres.Slides.Add(slideIndex, 12)
+
+    ' Title
+    Set shp = pptSlide.Shapes.AddTextbox(1, 40, 20, 700, 40)
+    With shp.TextFrame.TextRange
+        .Text = "Monthly Sales Data"
+        .Font.Size = 26
+        .Font.Bold = True
+    End With
+
+    ' Fixed data range (stable)
+    ws.Range("A1:B13").Copy
+    DoEvents
+
+    pptSlide.Shapes.PasteSpecial DataType:=2   ' EMF
+
+    Set shp = pptSlide.Shapes(pptSlide.Shapes.Count)
+    shp.LockAspectRatio = msoTrue
+    shp.Width = 500
+    shp.Left = (pptPres.PageSetup.SlideWidth - shp.Width) / 2
+    shp.Top = 90
+
+    slideIndex = slideIndex + 1
+
+    ' =====================================================
+    ' SLIDE 2 — ALL GRAPHS (CHARTS + IMAGES)
+    ' =====================================================
+    Set pptSlide = pptPres.Slides.Add(slideIndex, 12)
+
+    ' Title
+    Set shp = pptSlide.Shapes.AddTextbox(1, 40, 20, 700, 40)
+    With shp.TextFrame.TextRange
+        .Text = "Sales Trend Analysis"
+        .Font.Size = 26
+        .Font.Bold = True
+    End With
+
+    leftPos = 40
+
+    ' ---- REAL EXCEL CHARTS ----
+    For Each ch In ws.ChartObjects
+        ch.Copy
+        DoEvents
+        pptSlide.Shapes.Paste
+
+        Set shp = pptSlide.Shapes(pptSlide.Shapes.Count)
+        shp.Width = 350
+        shp.Height = 250
+        shp.Left = leftPos
+        shp.Top = 80
+
+        leftPos = leftPos + 380
+    Next ch
+
+    ' ---- GRAPH IMAGES / SHAPES ----
+    For Each sh In ws.Shapes
+        If sh.Type = msoPicture Or sh.Type = msoChart Then
+            sh.Copy
+            DoEvents
+            pptSlide.Shapes.Paste
+
+            Set shp = pptSlide.Shapes(pptSlide.Shapes.Count)
+            shp.Width = 350
+            shp.Height = 250
+            shp.Left = leftPos
+            shp.Top = 80
+
+            leftPos = leftPos + 380
+        End If
+    Next sh
+
+    ' -----------------------------
+    ' SAVE & CLOSE
+    ' -----------------------------
+    pptPres.SaveAs pptPath
+    pptPres.Close
+    pptApp.Quit
+
+SafeExit:
+    Set pptPres = Nothing
+    Set pptApp = Nothing
+
+End Sub
