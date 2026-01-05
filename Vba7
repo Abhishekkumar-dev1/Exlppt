@@ -1,0 +1,127 @@
+Sub UpdatePPT_FromExcel()
+
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    Dim ws As Worksheet
+    Dim pptPath As String
+    Dim shp As Object
+    Dim ch As ChartObject
+    Dim dataRange As Range
+    Dim slideIndex As Long
+    Dim leftPos As Long
+
+    On Error GoTo SafeExit
+
+    ' ---- CHANGE ONLY IF YOUR SHEET NAME IS DIFFERENT ----
+    Set ws = ThisWorkbook.Worksheets("Sheet1")
+
+    pptPath = ThisWorkbook.Path & "\Sales_Report.pptx"
+
+    ' ===============================
+    ' Start / Connect PowerPoint
+    ' ===============================
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    pptApp.Visible = True
+    On Error GoTo SafeExit
+
+    ' ===============================
+    ' Open or Create PPT
+    ' ===============================
+    If Dir(pptPath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptPath, , False)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+    End If
+
+    ' ===============================
+    ' Clear old slides
+    ' ===============================
+    Do While pptPres.Slides.Count > 0
+        pptPres.Slides(1).Delete
+    Loop
+
+    slideIndex = 1
+
+    ' =====================================================
+    ' SLIDE 1 — DATA TABLE (AUTO-DETECT)
+    ' =====================================================
+    Set dataRange = ws.Range("A1").CurrentRegion
+
+    If Application.WorksheetFunction.CountA(dataRange) = 0 Then
+        MsgBox "No data found in Sheet1!", vbCritical
+        GoTo SafeExit
+    End If
+
+    Set pptSlide = pptPres.Slides.Add(slideIndex, 12)
+
+    ' Title
+    Set shp = pptSlide.Shapes.AddTextbox(1, 40, 20, 700, 40)
+    With shp.TextFrame.TextRange
+        .Text = "Monthly Sales Data"
+        .Font.Size = 26
+        .Font.Bold = True
+    End With
+
+    ' Copy data
+    dataRange.Copy
+    DoEvents
+    pptSlide.Shapes.PasteSpecial DataType:=2   ' EMF for clean table
+
+    Set shp = pptSlide.Shapes(pptSlide.Shapes.Count)
+    shp.Left = 40
+    shp.Top = 80
+    shp.Width = 450
+
+    slideIndex = slideIndex + 1
+
+    ' =====================================================
+    ' SLIDE 2 — CHARTS (AUTO-DETECT)
+    ' =====================================================
+    If ws.ChartObjects.Count = 0 Then
+        MsgBox "No charts found on Sheet1!", vbCritical
+        GoTo SafeExit
+    End If
+
+    Set pptSlide = pptPres.Slides.Add(slideIndex, 12)
+
+    ' Title
+    Set shp = pptSlide.Shapes.AddTextbox(1, 40, 20, 700, 40)
+    With shp.TextFrame.TextRange
+        .Text = "Sales Trend Analysis"
+        .Font.Size = 26
+        .Font.Bold = True
+    End With
+
+    leftPos = 40
+
+    For Each ch In ws.ChartObjects
+        ch.Chart.Copy
+        DoEvents
+        pptSlide.Shapes.Paste   ' NEVER PasteSpecial for charts
+
+        Set shp = pptSlide.Shapes(pptSlide.Shapes.Count)
+        shp.Left = leftPos
+        shp.Top = 80
+        shp.Width = 350
+        shp.Height = 250
+
+        leftPos = leftPos + 380
+    Next ch
+
+    ' ===============================
+    ' Save & Close
+    ' ===============================
+    pptPres.SaveAs pptPath
+    pptPres.Close
+    pptApp.Quit
+
+SafeExit:
+    Set pptPres = Nothing
+    Set pptApp = Nothing
+
+End Sub
