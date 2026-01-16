@@ -1,0 +1,64 @@
+Sub UpdateCityDetails()
+
+    Dim PPT As Presentation
+    Dim Sld As Slide
+    Dim shp As Shape
+
+    Dim xlApp As Object
+    Dim xlWB As Object
+    Dim xlWS As Object
+    
+    Dim city As String
+    Dim lastRow As Long
+    Dim i As Long
+    
+    Dim area As String
+    Dim population As String
+    Dim place As String
+    
+    Set PPT = ActivePresentation
+    Set Sld = PPT.Slides(1)  'Slide number where text is
+    
+    '--- Read highlighted city name from PPT ---
+    city = Trim(Sld.Shapes("CityName").TextFrame.TextRange.Text)
+    If city = "" Then
+        MsgBox "City name is empty!", vbExclamation
+        Exit Sub
+    End If
+    
+    '--- Open Excel workbook ---
+    Set xlApp = CreateObject("Excel.Application")
+    xlApp.Visible = False
+    Set xlWB = xlApp.Workbooks.Open(PPT.Path & "\Data.xlsx")
+    Set xlWS = xlWB.Sheets("Sheet1")
+    
+    lastRow = xlWS.Cells(xlWS.Rows.Count, "A").End(-4162).Row
+    
+    '--- Search city in Excel ---
+    For i = 2 To lastRow
+        If LCase(xlWS.Cells(i, 1).Value) = LCase(city) Then
+            
+            population = xlWS.Cells(i, 2).Value
+            area = xlWS.Cells(i, 3).Value
+            place = xlWS.Cells(i, 4).Value
+            
+            '--- Update slide text ---
+            Sld.Shapes("CityInfo").TextFrame.TextRange.Text = _
+                "This city has an area of " & area & " sq km, " & _
+                "a population of " & population & " million, " & _
+                "and a popular place here is " & place & "."
+            
+            xlWB.Close False
+            xlApp.Quit
+            
+            MsgBox "Slide updated successfully!", vbInformation
+            Exit Sub
+        End If
+    Next i
+    
+    MsgBox "City not found in Excel!", vbCritical
+    
+    xlWB.Close False
+    xlApp.Quit
+    
+End Sub
